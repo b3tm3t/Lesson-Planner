@@ -486,6 +486,10 @@
             <textarea oninput="updateTpData(${index}, 'content', this.value)" rows="2" placeholder="TP content..." class="w-full p-1 border text-xs rounded">${tp.content}</textarea>
           </div>
           <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-500">Safety / Risk Assessment</label>
+            <input type="text" value="${tp.safety || ''}" placeholder="Safety precautions or hazards..." oninput="updateTpData(${index}, 'safety', this.value)" class="w-full p-1 border text-xs rounded" />
+          </div>
+          <div>
             <label class="block text-[10px] uppercase font-semibold text-gray-500">Confirmation</label>
             <textarea oninput="updateTpData(${index}, 'confirmation', this.value)" rows="2" placeholder="Confirmation..." class="w-full p-1 border text-xs rounded">${tp.confirmation}</textarea>
           </div>
@@ -499,7 +503,7 @@
     }
 
     function addTeachingPoint() {
-      teachingPoints.push({ time: "", method: "", content: "", confirmation: "", notes: "" });
+      teachingPoints.push({ time: "", method: "", content: "", safety: "", confirmation: "", notes: "" });
       renderTpForms();
       updatePreview();
       setTimeout(() => scrollSubCarousel('sec2-carousel', 1000), 50);
@@ -573,6 +577,7 @@
             <div><span class="font-bold">Teaching Method:</span> ${tp.method || ''}</div>
             <div class="mt-1 font-bold">TP ${i + 1}:</div>
             <div>${tp.content || ''}</div>
+            ${tp.safety ? `<div class="mt-1 font-bold text-red-800">Safety / Risk Assessment:</div><div>${tp.safety}</div>` : ''}
             <div class="mt-1 font-bold">Confirmation:</div>
             <div>${tp.confirmation || ''}</div>
           </td>
