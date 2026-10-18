@@ -492,10 +492,12 @@
     }
 
     // Helper to extract clean integer minute values from text
+    // Helper to extract clean floating-point time values (including decimals) from text
     function parseMinutes(val) {
-      if (!val) return 0;
-      const match = val.toString().match(/\d+/);
-      return match ? parseInt(match[0], 10) : 0;
+    if (!val) return 0;
+    // Regex matches numbers including decimals (e.g., 2.5, .5, 10)
+    const match = val.toString().match(/\d+(?:\.\d+)?/);
+    return match ? parseFloat(match[0]) : 0;
     }
 
     // Update Time Remaining Counter Bar at top header
