@@ -8,8 +8,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- html2pdf.js CDN for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <!-- PDF.js CDN for PDF importing/parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     @media print {
       .no-print {
@@ -17,7 +15,7 @@
       }
     }
     
-    /* Document fixed Letter proportions */
+    /* Fixed Letter Sheet Styling */
     .lesson-plan-page {
       width: 8.5in;
       min-height: 11in;
@@ -26,10 +24,10 @@
       color: #000000;
       font-family: Arial, Helvetica, sans-serif;
       box-sizing: border-box;
-      transform-origin: top center;
+      margin: 0 auto;
     }
 
-    /* Prevent individual Teaching Point rows from splitting across page breaks */
+    /* Keep individual Teaching Point table rows intact across page breaks */
     .tp-row {
       break-inside: avoid !important;
       page-break-inside: avoid !important;
@@ -40,12 +38,11 @@
       white-space: pre-wrap;
     }
 
-    /* Container that automatically scales down the 8.5" preview without horizontal scrollbars */
-    .preview-wrapper {
+    /* Unscaled container wrapper for clean PDF snapshots */
+    .preview-container {
       width: 100%;
-      display: flex;
-      justify-content: center;
-      overflow: hidden;
+      max-width: 8.5in;
+      margin: 0 auto;
     }
 
     /* Scrollbar styling for forms */
@@ -85,21 +82,13 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <!-- PDF Import Button -->
-        <label class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-3 py-2 rounded shadow transition-colors cursor-pointer flex items-center gap-1.5 text-xs">
-          <span>📤</span> Import PDF
-          <input type="file" id="pdfFileInput" accept="application/pdf" onchange="importPDF(event)" class="hidden" />
-        </label>
-
-        <!-- PDF Export Button -->
-        <button 
-          onclick="exportToPDF()" 
-          class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded shadow transition-colors flex items-center gap-2 text-xs"
-        >
-          <span>📥</span> Export PDF
-        </button>
-      </div>
+      <!-- PDF Export Button -->
+      <button 
+        onclick="exportToPDF()" 
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded shadow transition-colors flex items-center gap-2 text-xs"
+      >
+        <span>📥</span> Export PDF
+      </button>
     </div>
   </header>
 
@@ -205,15 +194,6 @@
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase">Intro Notes:</label>
                 <input type="text" id="inputIntroNotes" value="" placeholder="Notes" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
-              </div>
-            </div>
-
-            <!-- Slide 5: Extras / Unsorted Notes -->
-            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
-              <h3 class="text-xs font-bold uppercase text-amber-700">Extras / Unsorted Notes</h3>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase">Unsorted Text from PDF</label>
-                <textarea id="inputUnsortedNotes" oninput="updatePreview()" rows="5" placeholder="Any unrouted text from imported PDF will land here..." class="w-full mt-1 p-2 border border-gray-300 rounded text-xs multiline-text"></textarea>
               </div>
             </div>
           </div>
@@ -326,8 +306,8 @@
     </div>
 
     <!-- PREVIEW AREA (Right Side) -->
-    <div id="previewBox" class="preview-wrapper bg-gray-200 p-2 md:p-4 rounded-lg shadow-inner overflow-hidden">
-      <div id="previewScaleContainer">
+    <div id="previewBox" class="bg-gray-200 p-2 md:p-4 rounded-lg shadow-inner overflow-x-auto">
+      <div class="preview-container">
         <!-- Vertical Letter Preview Layout -->
         <div id="lessonPlanPreview" class="lesson-plan-page shadow-2xl text-xs leading-tight">
           
@@ -437,12 +417,6 @@
             </tbody>
           </table>
 
-          <!-- EXTRAS / UNSORTED NOTES PREVIEW SECTION -->
-          <div id="previewUnsortedBox" class="hidden my-2 border border-black p-2 bg-gray-50 text-xs">
-            <div class="font-bold underline mb-1">EXTRAS / UNSORTED NOTES:</div>
-            <div id="previewUnsortedNotes" class="multiline-text text-gray-800"></div>
-          </div>
-
           <div class="flex justify-between text-[9px] font-mono border-t border-black pt-1 mt-2">
             <span>PO1 Sullivan Lesson Plan Generator</span>
             <span id="previewFooterCode"></span>
@@ -455,9 +429,6 @@
   </main>
 
   <script>
-    // Initialize PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
     let currentSection = 1;
     let teachingPoints = [];
 
@@ -496,7 +467,6 @@
       }
     }
 
-    // Helper supporting decimal numbers (e.g. 2.5 min)
     function parseMinutes(val) {
       if (!val) return 0;
       const match = val.toString().match(/\d+(?:\.\d+)?/);
@@ -537,7 +507,7 @@
       if (teachingPoints.length === 0) {
         container.innerHTML = `
           <div class="text-xs text-gray-500 italic p-4 border border-dashed rounded w-full text-center">
-            No Teaching Points added yet. Click "+ Add TP" or Import a PDF.
+            No Teaching Points added yet. Click "+ Add TP" to create one.
           </div>
         `;
         return;
@@ -593,12 +563,8 @@
       });
     }
 
-    function addTeachingPoint(customData = null) {
-      if (customData) {
-        teachingPoints.push(customData);
-      } else {
-        teachingPoints.push({ name: "", time: "", method: "", content: "", safety: "", confirmation: "", notes: "" });
-      }
+    function addTeachingPoint() {
+      teachingPoints.push({ name: "", time: "", method: "", content: "", safety: "", confirmation: "", notes: "" });
       renderTpForms();
       updatePreview();
       setTimeout(() => scrollSubCarousel('sec2-carousel', 1000), 50);
@@ -613,26 +579,6 @@
     function updateTpData(index, key, value) {
       teachingPoints[index][key] = value;
       updatePreview();
-    }
-
-    function fitPreviewToContainer() {
-      const previewBox = document.getElementById('previewBox');
-      const page = document.getElementById('lessonPlanPreview');
-      const container = document.getElementById('previewScaleContainer');
-
-      if (!previewBox || !page || !container) return;
-
-      const availableWidth = previewBox.clientWidth - 32;
-      const pageWidth = page.offsetWidth;
-
-      if (availableWidth < pageWidth) {
-        const scale = availableWidth / pageWidth;
-        page.style.transform = `scale(${scale})`;
-        container.style.height = `${page.offsetHeight * scale}px`;
-      } else {
-        page.style.transform = 'scale(1)';
-        container.style.height = 'auto';
-      }
     }
 
     function updatePreview() {
@@ -666,15 +612,6 @@
       document.getElementById('previewNextLesson').innerText = document.getElementById('inputNextLesson').value;
       document.getElementById('previewConcNotes').innerText = document.getElementById('inputConcNotes').value;
 
-      const unsortedVal = document.getElementById('inputUnsortedNotes').value;
-      const previewUnsortedBox = document.getElementById('previewUnsortedBox');
-      if (unsortedVal.trim()) {
-        previewUnsortedBox.classList.remove('hidden');
-        document.getElementById('previewUnsortedNotes').innerText = unsortedVal;
-      } else {
-        previewUnsortedBox.classList.add('hidden');
-      }
-
       // Dynamic Teaching Points Table Preview with per-TP row page break avoidance
       const tpPreviewContainer = document.getElementById('previewTpContainer');
       tpPreviewContainer.innerHTML = '';
@@ -701,166 +638,15 @@
       });
 
       updateTimeTracker();
-      fitPreviewToContainer();
     }
 
-    // PDF Import Logic
-    async function importPDF(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let lines = [];
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          
-          let lastY = null;
-          let currentLine = "";
-
-          for (const item of textContent.items) {
-            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
-              if (currentLine.trim()) lines.push(currentLine.trim());
-              currentLine = "";
-            }
-            currentLine += item.str + " ";
-            lastY = item.transform[5];
-          }
-          if (currentLine.trim()) lines.push(currentLine.trim());
-        }
-
-        parsePDFLines(lines);
-        event.target.value = '';
-      } catch (err) {
-        alert("Error reading PDF file: " + err.message);
-      }
-    }
-
-    // Line-by-line Parsing Engine
-    function parsePDFLines(lines) {
-      teachingPoints = [];
-      let unsortedLines = [];
-      let currentTP = null;
-      let currentSectionMode = "HEADER";
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-
-        if (/Instructional Guide|LESSON PLAN|Annex\s+[A-Z]\s+to|A-CR-CCP-/i.test(line)) {
-          if (/A-CR-CCP-/i.test(line)) {
-            const match = line.match(/(A-CR-CCP-[A-Za-z0-9\/-]+)/);
-            if (match) document.getElementById('inputRefCode').value = match[1];
-          }
-          if (/Annex\s+[A-Z]/i.test(line)) {
-            document.getElementById('inputAnnexRef').value = line;
-          }
-          continue;
-        }
-
-        if (/EO\s*#:?/i.test(line)) {
-          const match = line.match(/EO\s*#:?\s*([A-Z0-9\.-]+)/i);
-          if (match) document.getElementById('inputEoNumber').value = match[1];
-          continue;
-        }
-
-        if (/Instructor:?/i.test(line)) {
-          const match = line.match(/Instructor:?\s*(.+)/i);
-          if (match) document.getElementById('inputInstructor').value = match[1];
-          continue;
-        }
-
-        if (/Title of the EO:?/i.test(line)) {
-          const match = line.match(/Title of the EO:?\s*(.+)/i);
-          if (match) document.getElementById('inputEoTitle').value = match[1];
-          continue;
-        }
-
-        if (/What:?/i.test(line)) {
-          document.getElementById('inputWhat').value = line.replace(/What:?/i, '').trim();
-          continue;
-        }
-        if (/Where:?/i.test(line)) {
-          document.getElementById('inputWhere').value = line.replace(/Where:?/i, '').trim();
-          continue;
-        }
-        if (/Why:?/i.test(line)) {
-          document.getElementById('inputWhy').value = line.replace(/Why:?/i, '').trim();
-          continue;
-        }
-
-        const tpStartMatch = line.match(/^TP\s*(\d+):?\s*(.*)/i);
-        if (tpStartMatch) {
-          if (currentTP) addTeachingPoint(currentTP);
-          currentTP = {
-            name: tpStartMatch[2] || `TP ${tpStartMatch[1]}`,
-            time: "5",
-            method: "Interactive Lecture",
-            content: "",
-            safety: "",
-            confirmation: "",
-            notes: ""
-          };
-          currentSectionMode = "TP_BODY";
-          continue;
-        }
-
-        if (currentSectionMode === "TP_BODY" && currentTP) {
-          if (/Confirmation:?/i.test(line)) {
-            currentTP.confirmation += line.replace(/Confirmation:?/i, '').trim() + " ";
-          } else if (/Teaching Method:?/i.test(line)) {
-            currentTP.method = line.replace(/Teaching Method:?/i, '').trim();
-          } else if (/Summary:|Re-Motivation:|END OF LESSON/i.test(line)) {
-            addTeachingPoint(currentTP);
-            currentTP = null;
-            currentSectionMode = "CONCLUSION";
-          } else {
-            currentTP.content += line + "\n";
-            continue;
-          }
-        }
-
-        if (/Summary:?/i.test(line)) {
-          document.getElementById('inputSummary').value = line.replace(/Summary:?/i, '').trim();
-          continue;
-        }
-        if (/Re-Motivation:?/i.test(line)) {
-          document.getElementById('inputRemotivation').value = line.replace(/Re-Motivation:?/i, '').trim();
-          continue;
-        }
-        if (/Your next lesson will be:?/i.test(line)) {
-          document.getElementById('inputNextLesson').value = line.replace(/Your next lesson will be:?/i, '').trim();
-          continue;
-        }
-
-        unsortedLines.push(line);
-      }
-
-      if (currentTP) {
-        addTeachingPoint(currentTP);
-      }
-
-      if (unsortedLines.length > 0) {
-        document.getElementById('inputUnsortedNotes').value = unsortedLines.join("\n");
-      }
-
-      renderTpForms();
-      updatePreview();
-      alert("PDF imported! Fields filled and unsorted notes routed to Section 1 Extras.");
-    }
-
-    // PDF Export Function
+    // Export PDF using strict CSS page breaking logic
     function exportToPDF() {
       const element = document.getElementById('lessonPlanPreview');
       const eoNum = document.getElementById('inputEoNumber').value || 'Lesson_Plan';
-      
-      const currentTransform = element.style.transform;
-      element.style.transform = 'scale(1)';
 
       const opt = {
-        margin:       [0.2, 0.2, 0.2, 0.2],
+        margin:       [0.4, 0.4, 0.4, 0.4],
         filename:     `${eoNum}_Lesson_Plan.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
@@ -868,12 +654,8 @@
         pagebreak:    { mode: ['css', 'legacy'] }
       };
 
-      html2pdf().set(opt).from(element).save().then(() => {
-        element.style.transform = currentTransform;
-      });
+      html2pdf().set(opt).from(element).save();
     }
-
-    window.addEventListener('resize', fitPreviewToContainer);
 
     // Initial Load
     renderTpForms();
