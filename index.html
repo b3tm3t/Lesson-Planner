@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PO1 Sullivan Lesson Plan Generator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- html2pdf.js CDN for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
+    
+    /* Document fixed proportions */
+    .lesson-plan-page {
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.5in;
+      background: #ffffff;
+      color: #000000;
+      font-family: Arial, Helvetica, sans-serif;
+      box-sizing: border-box;
+      transform-origin: top center;
+    }
+
+    /* Container that automatically scales down the 8.5" preview without horizontal scrollbars */
+    .preview-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Scrollbar styling for forms */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+  <!-- Header / Navigation -->
+  <header class="bg-slate-800 text-white p-4 shadow-md no-print">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        <span>📋</span> PO1 Sullivan Lesson Plan Generator
+      </h1>
+      <button 
+        onclick="exportToPDF()" 
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded shadow transition-colors flex items-center gap-2"
+      >
+        <span>📥</span> Export to PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- FORM CONTROLS (Left Side) -->
+    <div class="bg-white p-6 rounded-lg shadow space-y-6 no-print flex flex-col justify-between min-h-[600px]">
+      
+      <div>
+        <!-- Section Navigation Tabs -->
+        <div class="flex border-b border-gray-200 mb-6 font-semibold text-xs text-gray-500">
+          <button id="tab-sec1" onclick="switchSection(1)" class="py-2 px-3 border-b-2 border-slate-800 text-slate-800 font-bold">
+            1. Intro & Info
+          </button>
+          <button id="tab-sec2" onclick="switchSection(2)" class="py-2 px-3 border-b-2 border-transparent hover:text-slate-700">
+            2. Teaching Points
+          </button>
+          <button id="tab-sec3" onclick="switchSection(3)" class="py-2 px-3 border-b-2 border-transparent hover:text-slate-700">
+            3. Conclusion
+          </button>
+        </div>
+
+        <!-- SECTION 1 CREATOR MENU -->
+        <div id="section-menu-1" class="space-y-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-slate-800 border-l-4 border-slate-800 pl-2">
+              1. Information & Introduction
+            </h2>
+            <div class="flex gap-1">
+              <button type="button" onclick="scrollSubCarousel('sec1-carousel', -260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">◀</button>
+              <button type="button" onclick="scrollSubCarousel('sec1-carousel', 260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">▶</button>
+            </div>
+          </div>
+
+          <div id="sec1-carousel" class="flex overflow-x-auto gap-4 scroll-smooth no-scrollbar p-1">
+            <!-- Slide 1: Header Meta -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Header Info</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">EO Number</label>
+                <input type="text" id="inputEoNumber" value="" placeholder="e.g. M309.01" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Instructor</label>
+                <input type="text" id="inputInstructor" value="" placeholder="e.g. PO1 Sullivan" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Enabling Objective Title</label>
+                <input type="text" id="inputEoTitle" value="" placeholder="Title of the EO" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+            </div>
+
+            <!-- Slide 2: Location & Timing -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Location & Timing</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Location</label>
+                <input type="text" id="inputLocation" value="" placeholder="Location" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Total Time</label>
+                <input type="text" id="inputTotalTime" value="" placeholder="e.g. 30 min" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Intro Time</label>
+                <input type="text" id="inputIntroTime" value="" placeholder="e.g. 5 min" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+            </div>
+
+            <!-- Slide 3: References & Purpose -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">References & Purpose</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">A-CR-CCP Reference Code</label>
+                <input type="text" id="inputRefCode" value="" placeholder="Reference Code" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Annex / EO Reference</label>
+                <input type="text" id="inputAnnexRef" value="" placeholder="Annex Reference" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">What:</label>
+                <input type="text" id="inputWhat" value="" placeholder="What will be learned" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+            </div>
+
+            <!-- Slide 4: Context & Notes -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Context & Notes</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Where:</label>
+                <input type="text" id="inputWhere" value="" placeholder="Where this applies" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Why:</label>
+                <input type="text" id="inputWhy" value="" placeholder="Why this is taught" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Review:</label>
+                <input type="text" id="inputReview" oninput="updatePreview()" placeholder="Review details" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Intro Notes:</label>
+                <input type="text" id="inputIntroNotes" value="" placeholder="Notes" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2 CREATOR MENU -->
+        <div id="section-menu-2" class="space-y-4 hidden">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-slate-800 border-l-4 border-slate-800 pl-2">
+              2. Teaching Points (Body)
+            </h2>
+            <div class="flex gap-2 items-center">
+              <button 
+                type="button" 
+                onclick="addTeachingPoint()" 
+                class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-2 py-1.5 rounded transition-colors"
+              >
+                + Add TP
+              </button>
+              <button type="button" onclick="scrollSubCarousel('sec2-carousel', -260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">◀</button>
+              <button type="button" onclick="scrollSubCarousel('sec2-carousel', 260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">▶</button>
+            </div>
+          </div>
+
+          <div id="sec2-carousel" class="flex overflow-x-auto gap-4 scroll-smooth no-scrollbar p-1">
+            <!-- Dynamic TPs injected here -->
+          </div>
+        </div>
+
+        <!-- SECTION 3 CREATOR MENU -->
+        <div id="section-menu-3" class="space-y-4 hidden">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-slate-800 border-l-4 border-slate-800 pl-2">
+              3. Conclusion & Confirmation
+            </h2>
+            <div class="flex gap-1">
+              <button type="button" onclick="scrollSubCarousel('sec3-carousel', -260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">◀</button>
+              <button type="button" onclick="scrollSubCarousel('sec3-carousel', 260)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-2 py-1 rounded text-xs">▶</button>
+            </div>
+          </div>
+
+          <div id="sec3-carousel" class="flex overflow-x-auto gap-4 scroll-smooth no-scrollbar p-1">
+            <!-- Slide 1: Confirmation -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Confirmation Phase</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">End of Lesson Conf. Time</label>
+                <input type="text" id="inputEolTime" value="" placeholder="e.g. 5 min" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">End of Lesson Confirmation</label>
+                <textarea id="inputEolConfirmation" oninput="updatePreview()" rows="3" placeholder="Confirmation questions..." class="w-full mt-1 p-2 border border-gray-300 rounded text-xs"></textarea>
+              </div>
+            </div>
+
+            <!-- Slide 2: Summary -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Summary</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Conclusion Time</label>
+                <input type="text" id="inputConcTime" value="" placeholder="e.g. 5 min" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Summary</label>
+                <textarea id="inputSummary" oninput="updatePreview()" rows="3" placeholder="Summary statement..." class="w-full mt-1 p-2 border border-gray-300 rounded text-xs"></textarea>
+              </div>
+            </div>
+
+            <!-- Slide 3: Next Steps -->
+            <div class="min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-3 flex-shrink-0">
+              <h3 class="text-xs font-bold uppercase text-slate-600">Next Steps & Notes</h3>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Re-Motivation</label>
+                <input type="text" id="inputRemotivation" value="" placeholder="Re-motivation statement" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Next Lesson</label>
+                <input type="text" id="inputNextLesson" value="" placeholder="Next lesson details" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase">Conclusion Notes</label>
+                <input type="text" id="inputConcNotes" value="" placeholder="Notes" oninput="updatePreview()" class="w-full mt-1 p-2 border border-gray-300 rounded text-xs" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu Carousel Controls (Section Prev / Next) -->
+      <div class="flex justify-between items-center border-t border-gray-200 pt-4 mt-6">
+        <button 
+          type="button" 
+          id="prev-sec-btn"
+          onclick="navigateSection(-1)" 
+          class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold px-3 py-2 rounded flex items-center gap-1 disabled:opacity-50"
+        >
+          ◀ Previous Section
+        </button>
+        <span id="section-indicator" class="text-xs font-bold text-slate-600">Section 1 of 3</span>
+        <button 
+          type="button" 
+          id="next-sec-btn"
+          onclick="navigateSection(1)" 
+          class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded flex items-center gap-1"
+        >
+          Next Section ▶
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW AREA (Right Side) -->
+    <div id="previewBox" class="preview-wrapper bg-gray-200 p-2 md:p-4 rounded-lg shadow-inner overflow-hidden">
+      <div id="previewScaleContainer">
+        <!-- Vertical Letter Preview Layout -->
+        <div id="lessonPlanPreview" class="lesson-plan-page shadow-2xl text-xs leading-tight">
+          
+          <!-- Header Code References -->
+          <div class="flex justify-between text-[10px] font-mono border-b border-black pb-1 mb-1">
+            <span id="previewRefCode"></span>
+            <span id="previewAnnexRef"></span>
+          </div>
+          
+          <div class="text-center font-bold text-sm tracking-wider my-1 uppercase">
+            Instructional Guide<br />LESSON PLAN
+          </div>
+
+          <!-- EO Details Header Block -->
+          <table class="w-full border-collapse border border-black text-xs my-2">
+            <tr>
+              <td class="border border-black p-1 font-bold w-1/6">EO #:</td>
+              <td id="previewEoNumber" class="border border-black p-1 w-2/6"></td>
+              <td class="border border-black p-1 font-bold w-1/6">Instructor:</td>
+              <td id="previewInstructor" class="border border-black p-1 w-2/6"></td>
+            </tr>
+            <tr>
+              <td class="border border-black p-1 font-bold">Title of the EO:</td>
+              <td id="previewEoTitle" colspan="3" class="border border-black p-1 font-semibold"></td>
+            </tr>
+            <tr>
+              <td class="border border-black p-1 font-bold">Location:</td>
+              <td id="previewLocation" class="border border-black p-1"></td>
+              <td class="border border-black p-1 font-bold">Total Time:</td>
+              <td id="previewTotalTime" class="border border-black p-1"></td>
+            </tr>
+          </table>
+
+          <!-- SECTION 1: INTRODUCTION -->
+          <table class="w-full border-collapse border border-black text-xs my-2">
+            <thead>
+              <tr class="bg-gray-200 text-left font-bold border-b border-black">
+                <th class="border border-black p-1 w-1/6">TIME</th>
+                <th class="border border-black p-1 w-4/6">INTRODUCTION</th>
+                <th class="border border-black p-1 w-1/6">NOTES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="previewIntroTime" class="border border-black p-1 align-top text-center"></td>
+                <td class="border border-black p-1 align-top space-y-1">
+                  <div><span class="font-bold">What:</span> <span id="previewWhat"></span></div>
+                  <div><span class="font-bold">Where:</span> <span id="previewWhere"></span></div>
+                  <div><span class="font-bold">Why:</span> <span id="previewWhy"></span></div>
+                  <div class="mt-1"><span class="font-bold">REVIEW:</span> <span id="previewReview"></span></div>
+                </td>
+                <td id="previewIntroNotes" class="border border-black p-1 align-top italic"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- SECTION 2: BODY / TEACHING POINTS -->
+          <table class="w-full border-collapse border border-black text-xs my-2">
+            <thead>
+              <tr class="bg-gray-200 text-left font-bold border-b border-black">
+                <th class="border border-black p-1 w-1/6">TIME</th>
+                <th class="border border-black p-1 w-4/6">BODY</th>
+                <th class="border border-black p-1 w-1/6">NOTES</th>
+              </tr>
+            </thead>
+            <tbody id="previewTpContainer">
+              <!-- Dynamic preview rows inject here -->
+            </tbody>
+          </table>
+
+          <!-- SECTION 3: CONCLUSION & CONFIRMATION -->
+          <table class="w-full border-collapse border border-black text-xs my-2">
+            <thead>
+              <tr class="bg-gray-200 text-left font-bold border-b border-black">
+                <th class="border border-black p-1 w-1/6">TIME</th>
+                <th class="border border-black p-1 w-4/6">END OF LESSON CONFIRMATION</th>
+                <th class="border border-black p-1 w-1/6">NOTES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="previewEolTime" class="border border-black p-1 align-top text-center"></td>
+                <td id="previewEolConfirmation" class="border border-black p-1 align-top"></td>
+                <td class="border border-black p-1 align-top"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full border-collapse border border-black text-xs my-2">
+            <thead>
+              <tr class="bg-gray-200 text-left font-bold border-b border-black">
+                <th class="border border-black p-1 w-1/6">TIME</th>
+                <th class="border border-black p-1 w-4/6">CONCLUSION</th>
+                <th class="border border-black p-1 w-1/6">NOTES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="previewConcTime" class="border border-black p-1 align-top text-center"></td>
+                <td class="border border-black p-1 align-top space-y-1">
+                  <div><span class="font-bold">Summary:</span> <span id="previewSummary"></span></div>
+                  <div><span class="font-bold">Re-Motivation:</span> <span id="previewRemotivation"></span></div>
+                  <div><span class="font-bold">Your next lesson will be:</span> <span id="previewNextLesson"></span></div>
+                </td>
+                <td id="previewConcNotes" class="border border-black p-1 align-top italic"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="flex justify-between text-[9px] font-mono border-t border-black pt-1 mt-2">
+            <span>PO1 Sullivan Lesson Plan Generator</span>
+            <span id="previewFooterCode"></span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentSection = 1;
+    let teachingPoints = [];
+
+    // Switch between Section Creator Menus
+    function switchSection(secNum) {
+      currentSection = secNum;
+      
+      // Toggle Visibility
+      document.getElementById('section-menu-1').classList.toggle('hidden', secNum !== 1);
+      document.getElementById('section-menu-2').classList.toggle('hidden', secNum !== 2);
+      document.getElementById('section-menu-3').classList.toggle('hidden', secNum !== 3);
+
+      // Toggle Active Tab Styles
+      [1, 2, 3].forEach(i => {
+        const tab = document.getElementById(`tab-sec${i}`);
+        if (i === secNum) {
+          tab.className = "py-2 px-3 border-b-2 border-slate-800 text-slate-800 font-bold";
+        } else {
+          tab.className = "py-2 px-3 border-b-2 border-transparent hover:text-slate-700";
+        }
+      });
+
+      // Update Controls
+      document.getElementById('section-indicator').innerText = `Section ${secNum} of 3`;
+      document.getElementById('prev-sec-btn').disabled = (secNum === 1);
+      document.getElementById('next-sec-btn').disabled = (secNum === 3);
+    }
+
+    function navigateSection(direction) {
+      const target = currentSection + direction;
+      if (target >= 1 && target <= 3) {
+        switchSection(target);
+      }
+    }
+
+    // Scroll Helper for internal carousel cards
+    function scrollSubCarousel(containerId, distance) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.scrollBy({ left: distance, behavior: 'smooth' });
+      }
+    }
+
+    // Render Dynamic TP Cards inside Section 2 Creator
+    function renderTpForms() {
+      const container = document.getElementById('sec2-carousel');
+      container.innerHTML = '';
+
+      if (teachingPoints.length === 0) {
+        container.innerHTML = `
+          <div class="text-xs text-gray-500 italic p-4 border border-dashed rounded w-full text-center">
+            No Teaching Points added yet. Click "+ Add TP" to create one.
+          </div>
+        `;
+        return;
+      }
+
+      teachingPoints.forEach((tp, index) => {
+        const card = document.createElement('div');
+        card.className = "min-w-[260px] bg-gray-50 p-4 rounded border border-gray-200 space-y-2 flex-shrink-0 relative";
+        card.innerHTML = `
+          <div class="flex justify-between items-center border-b pb-1">
+            <span class="text-xs font-bold text-slate-700">TP ${index + 1}</span>
+            <button 
+              type="button" 
+              onclick="removeTeachingPoint(${index})" 
+              class="text-red-600 hover:text-red-800 text-xs font-bold px-1"
+              title="Remove TP"
+            >
+              ✕ Remove
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] uppercase font-semibold text-gray-500">Time</label>
+              <input type="text" value="${tp.time}" placeholder="e.g. 10 min" oninput="updateTpData(${index}, 'time', this.value)" class="w-full p-1 border text-xs rounded" />
+            </div>
+            <div>
+              <label class="block text-[10px] uppercase font-semibold text-gray-500">Method</label>
+              <input type="text" value="${tp.method}" placeholder="e.g. Lecture" oninput="updateTpData(${index}, 'method', this.value)" class="w-full p-1 border text-xs rounded" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-500">Content</label>
+            <textarea oninput="updateTpData(${index}, 'content', this.value)" rows="2" placeholder="TP content..." class="w-full p-1 border text-xs rounded">${tp.content}</textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-500">Confirmation</label>
+            <textarea oninput="updateTpData(${index}, 'confirmation', this.value)" rows="2" placeholder="Confirmation..." class="w-full p-1 border text-xs rounded">${tp.confirmation}</textarea>
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-500">Notes</label>
+            <input type="text" value="${tp.notes}" placeholder="Notes..." oninput="updateTpData(${index}, 'notes', this.value)" class="w-full p-1 border text-xs rounded" />
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function addTeachingPoint() {
+      teachingPoints.push({ time: "", method: "", content: "", confirmation: "", notes: "" });
+      renderTpForms();
+      updatePreview();
+      setTimeout(() => scrollSubCarousel('sec2-carousel', 1000), 50);
+    }
+
+    function removeTeachingPoint(index) {
+      teachingPoints.splice(index, 1);
+      renderTpForms();
+      updatePreview();
+    }
+
+    function updateTpData(index, key, value) {
+      teachingPoints[index][key] = value;
+      updatePreview();
+    }
+
+    // Auto-scale Preview Page to fit container box cleanly without horizontal scroll
+    function fitPreviewToContainer() {
+      const previewBox = document.getElementById('previewBox');
+      const page = document.getElementById('lessonPlanPreview');
+      const container = document.getElementById('previewScaleContainer');
+
+      if (!previewBox || !page || !container) return;
+
+      const availableWidth = previewBox.clientWidth - 32; // Account for padding
+      const pageWidth = page.offsetWidth; // Base width (~816px for 8.5in)
+
+      if (availableWidth < pageWidth) {
+        const scale = availableWidth / pageWidth;
+        page.style.transform = `scale(${scale})`;
+        container.style.height = `${page.offsetHeight * scale}px`;
+      } else {
+        page.style.transform = 'scale(1)';
+        container.style.height = 'auto';
+      }
+    }
+
+    // Update Live Preview Data
+    function updatePreview() {
+      document.getElementById('previewRefCode').innerText = document.getElementById('inputRefCode').value;
+      document.getElementById('previewAnnexRef').innerText = document.getElementById('inputAnnexRef').value;
+      document.getElementById('previewEoNumber').innerText = document.getElementById('inputEoNumber').value;
+      document.getElementById('previewInstructor').innerText = document.getElementById('inputInstructor').value;
+      document.getElementById('previewEoTitle').innerText = document.getElementById('inputEoTitle').value;
+      document.getElementById('previewLocation').innerText = document.getElementById('inputLocation').value;
+      document.getElementById('previewTotalTime').innerText = document.getElementById('inputTotalTime').value;
+
+      document.getElementById('previewIntroTime').innerText = document.getElementById('inputIntroTime').value;
+      document.getElementById('previewWhat').innerText = document.getElementById('inputWhat').value;
+      document.getElementById('previewWhere').innerText = document.getElementById('inputWhere').value;
+      document.getElementById('previewWhy').innerText = document.getElementById('inputWhy').value;
+      document.getElementById('previewReview').innerText = document.getElementById('inputReview').value;
+      document.getElementById('previewIntroNotes').innerText = document.getElementById('inputIntroNotes').value;
+
+      document.getElementById('previewEolTime').innerText = document.getElementById('inputEolTime').value;
+      document.getElementById('previewEolConfirmation').innerText = document.getElementById('inputEolConfirmation').value;
+      document.getElementById('previewConcTime').innerText = document.getElementById('inputConcTime').value;
+      document.getElementById('previewSummary').innerText = document.getElementById('inputSummary').value;
+      document.getElementById('previewRemotivation').innerText = document.getElementById('inputRemotivation').value;
+      document.getElementById('previewNextLesson').innerText = document.getElementById('inputNextLesson').value;
+      document.getElementById('previewConcNotes').innerText = document.getElementById('inputConcNotes').value;
+
+      const tpPreviewContainer = document.getElementById('previewTpContainer');
+      tpPreviewContainer.innerHTML = '';
+
+      teachingPoints.forEach((tp, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border border-black p-1 align-top text-center">${tp.time || ''}</td>
+          <td class="border border-black p-1 align-top space-y-1">
+            <div><span class="font-bold">Teaching Method:</span> ${tp.method || ''}</div>
+            <div class="mt-1 font-bold">TP ${i + 1}:</div>
+            <div>${tp.content || ''}</div>
+            <div class="mt-1 font-bold">Confirmation:</div>
+            <div>${tp.confirmation || ''}</div>
+          </td>
+          <td class="border border-black p-1 align-top italic">${tp.notes || ''}</td>
+        `;
+        tpPreviewContainer.appendChild(tr);
+      });
+
+      fitPreviewToContainer();
+    }
+
+    // PDF Export Function
+    function exportToPDF() {
+      const element = document.getElementById('lessonPlanPreview');
+      const eoNum = document.getElementById('inputEoNumber').value || 'Lesson_Plan';
+      
+      // Reset scale before taking snapshot
+      const currentTransform = element.style.transform;
+      element.style.transform = 'scale(1)';
+
+      const opt = {
+        margin:       [0.2, 0.2, 0.2, 0.2],
+        filename:     `${eoNum}_Lesson_Plan.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.style.transform = currentTransform;
+      });
+    }
+
+    // Event Listeners
+    window.addEventListener('resize', fitPreviewToContainer);
+
+    // Initial Load
+    renderTpForms();
+    updatePreview();
+    switchSection(1);
+  </script>
+</body>
+</html>
