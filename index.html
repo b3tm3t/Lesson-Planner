@@ -17,7 +17,7 @@
       }
     }
     
-    /* Document fixed proportions */
+    /* Document fixed Letter proportions */
     .lesson-plan-page {
       width: 8.5in;
       min-height: 11in;
@@ -27,6 +27,12 @@
       font-family: Arial, Helvetica, sans-serif;
       box-sizing: border-box;
       transform-origin: top center;
+    }
+
+    /* Prevent individual Teaching Point rows from splitting across page breaks */
+    .tp-row {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
     /* Preserve multiline linebreaks in preview */
@@ -207,7 +213,7 @@
               <h3 class="text-xs font-bold uppercase text-amber-700">Extras / Unsorted Notes</h3>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase">Unsorted Text from PDF</label>
-                <textarea id="inputUnsortedNotes" oninput="updatePreview()" rows="5" placeholder="Any remaining unrouted information from imported PDF will land here..." class="w-full mt-1 p-2 border border-gray-300 rounded text-xs multiline-text"></textarea>
+                <textarea id="inputUnsortedNotes" oninput="updatePreview()" rows="5" placeholder="Any unrouted text from imported PDF will land here..." class="w-full mt-1 p-2 border border-gray-300 rounded text-xs multiline-text"></textarea>
               </div>
             </div>
           </div>
@@ -388,7 +394,7 @@
               </tr>
             </thead>
             <tbody id="previewTpContainer">
-              <!-- Dynamic preview rows inject here -->
+              <!-- Dynamic TP rows inject here -->
             </tbody>
           </table>
 
@@ -455,7 +461,6 @@
     let currentSection = 1;
     let teachingPoints = [];
 
-    // Switch between Section Creator Menus
     function switchSection(secNum) {
       currentSection = secNum;
       
@@ -491,16 +496,13 @@
       }
     }
 
-    // Helper to extract clean integer minute values from text
-    // Helper to extract clean floating-point time values (including decimals) from text
+    // Helper supporting decimal numbers (e.g. 2.5 min)
     function parseMinutes(val) {
-    if (!val) return 0;
-    // Regex matches numbers including decimals (e.g., 2.5, .5, 10)
-    const match = val.toString().match(/\d+(?:\.\d+)?/);
-    return match ? parseFloat(match[0]) : 0;
+      if (!val) return 0;
+      const match = val.toString().match(/\d+(?:\.\d+)?/);
+      return match ? parseFloat(match[0]) : 0;
     }
 
-    // Update Time Remaining Counter Bar at top header
     function updateTimeTracker() {
       const totalPlanned = parseMinutes(document.getElementById('inputTotalTime').value);
       const introTime = parseMinutes(document.getElementById('inputIntroTime').value);
@@ -528,7 +530,6 @@
       }
     }
 
-    // Render Dynamic TP Cards inside Section 2 Creator
     function renderTpForms() {
       const container = document.getElementById('sec2-carousel');
       container.innerHTML = '';
@@ -614,7 +615,6 @@
       updatePreview();
     }
 
-    // Auto-scale Preview Page to fit container box cleanly without horizontal scroll
     function fitPreviewToContainer() {
       const previewBox = document.getElementById('previewBox');
       const page = document.getElementById('lessonPlanPreview');
@@ -635,7 +635,6 @@
       }
     }
 
-    // Update Live Preview Data & Time Bar
     function updatePreview() {
       document.getElementById('previewRefCode').innerText = document.getElementById('inputRefCode').value;
       document.getElementById('previewAnnexRef').innerText = document.getElementById('inputAnnexRef').value;
@@ -667,7 +666,6 @@
       document.getElementById('previewNextLesson').innerText = document.getElementById('inputNextLesson').value;
       document.getElementById('previewConcNotes').innerText = document.getElementById('inputConcNotes').value;
 
-      // Handle Extras / Unsorted Notes Display
       const unsortedVal = document.getElementById('inputUnsortedNotes').value;
       const previewUnsortedBox = document.getElementById('previewUnsortedBox');
       if (unsortedVal.trim()) {
@@ -677,12 +675,13 @@
         previewUnsortedBox.classList.add('hidden');
       }
 
-      // Dynamic Teaching Points Table Preview
+      // Dynamic Teaching Points Table Preview with per-TP row page break avoidance
       const tpPreviewContainer = document.getElementById('previewTpContainer');
       tpPreviewContainer.innerHTML = '';
 
       teachingPoints.forEach((tp, i) => {
         const tr = document.createElement('tr');
+        tr.className = "tp-row"; // Applies page-break-inside: avoid
         const tpTitleDisplay = tp.name ? `TP ${i + 1}: ${tp.name}` : `TP ${i + 1}:`;
         const timeDisplay = tp.time ? `${tp.time} min` : '';
 
@@ -705,7 +704,7 @@
       fitPreviewToContainer();
     }
 
-    // PDF Import & Automatic Parser Function
+    // PDF Import Logic
     async function importPDF(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -713,85 +712,143 @@
       try {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = "";
+        let lines = [];
 
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(" ");
-          fullText += pageText + "\n";
+          
+          let lastY = null;
+          let currentLine = "";
+
+          for (const item of textContent.items) {
+            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+              if (currentLine.trim()) lines.push(currentLine.trim());
+              currentLine = "";
+            }
+            currentLine += item.str + " ";
+            lastY = item.transform[5];
+          }
+          if (currentLine.trim()) lines.push(currentLine.trim());
         }
 
-        parsePDFContent(fullText);
-        event.target.value = ''; // Reset file input
+        parsePDFLines(lines);
+        event.target.value = '';
       } catch (err) {
         alert("Error reading PDF file: " + err.message);
       }
     }
 
-    // Intelligent Text Parsing Logic from imported PDF
-    function parsePDFContent(text) {
-      let unsortedText = text;
+    // Line-by-line Parsing Engine
+    function parsePDFLines(lines) {
+      teachingPoints = [];
+      let unsortedLines = [];
+      let currentTP = null;
+      let currentSectionMode = "HEADER";
 
-      function extractPattern(regex) {
-        const match = unsortedText.match(regex);
-        if (match) {
-          unsortedText = unsortedText.replace(match[0], " ");
-          return match[1] ? match[1].trim() : match[0].trim();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (/Instructional Guide|LESSON PLAN|Annex\s+[A-Z]\s+to|A-CR-CCP-/i.test(line)) {
+          if (/A-CR-CCP-/i.test(line)) {
+            const match = line.match(/(A-CR-CCP-[A-Za-z0-9\/-]+)/);
+            if (match) document.getElementById('inputRefCode').value = match[1];
+          }
+          if (/Annex\s+[A-Z]/i.test(line)) {
+            document.getElementById('inputAnnexRef').value = line;
+          }
+          continue;
         }
-        return "";
+
+        if (/EO\s*#:?/i.test(line)) {
+          const match = line.match(/EO\s*#:?\s*([A-Z0-9\.-]+)/i);
+          if (match) document.getElementById('inputEoNumber').value = match[1];
+          continue;
+        }
+
+        if (/Instructor:?/i.test(line)) {
+          const match = line.match(/Instructor:?\s*(.+)/i);
+          if (match) document.getElementById('inputInstructor').value = match[1];
+          continue;
+        }
+
+        if (/Title of the EO:?/i.test(line)) {
+          const match = line.match(/Title of the EO:?\s*(.+)/i);
+          if (match) document.getElementById('inputEoTitle').value = match[1];
+          continue;
+        }
+
+        if (/What:?/i.test(line)) {
+          document.getElementById('inputWhat').value = line.replace(/What:?/i, '').trim();
+          continue;
+        }
+        if (/Where:?/i.test(line)) {
+          document.getElementById('inputWhere').value = line.replace(/Where:?/i, '').trim();
+          continue;
+        }
+        if (/Why:?/i.test(line)) {
+          document.getElementById('inputWhy').value = line.replace(/Why:?/i, '').trim();
+          continue;
+        }
+
+        const tpStartMatch = line.match(/^TP\s*(\d+):?\s*(.*)/i);
+        if (tpStartMatch) {
+          if (currentTP) addTeachingPoint(currentTP);
+          currentTP = {
+            name: tpStartMatch[2] || `TP ${tpStartMatch[1]}`,
+            time: "5",
+            method: "Interactive Lecture",
+            content: "",
+            safety: "",
+            confirmation: "",
+            notes: ""
+          };
+          currentSectionMode = "TP_BODY";
+          continue;
+        }
+
+        if (currentSectionMode === "TP_BODY" && currentTP) {
+          if (/Confirmation:?/i.test(line)) {
+            currentTP.confirmation += line.replace(/Confirmation:?/i, '').trim() + " ";
+          } else if (/Teaching Method:?/i.test(line)) {
+            currentTP.method = line.replace(/Teaching Method:?/i, '').trim();
+          } else if (/Summary:|Re-Motivation:|END OF LESSON/i.test(line)) {
+            addTeachingPoint(currentTP);
+            currentTP = null;
+            currentSectionMode = "CONCLUSION";
+          } else {
+            currentTP.content += line + "\n";
+            continue;
+          }
+        }
+
+        if (/Summary:?/i.test(line)) {
+          document.getElementById('inputSummary').value = line.replace(/Summary:?/i, '').trim();
+          continue;
+        }
+        if (/Re-Motivation:?/i.test(line)) {
+          document.getElementById('inputRemotivation').value = line.replace(/Re-Motivation:?/i, '').trim();
+          continue;
+        }
+        if (/Your next lesson will be:?/i.test(line)) {
+          document.getElementById('inputNextLesson').value = line.replace(/Your next lesson will be:?/i, '').trim();
+          continue;
+        }
+
+        unsortedLines.push(line);
       }
 
-      // Route Recognized Standard Fields
-      const eoNum = extractPattern(/(?:EO\s*#?:?|EO\s+Num:?)\s*([A-Z0-9\.-]+)/i);
-      const instructor = extractPattern(/(?:Instructor:?)\s*([A-Za-z0-9\s]+?)(?=\s+Time|\s+Location|\s+Title|\n|$)/i);
-      const refCode = extractPattern(/(A-CR-CCP-[0-9]+\/[A-Z0-9-]+)/i);
-      const annexRef = extractPattern(/(Annex\s+[A-Z]\s+to\s+EO\s+[A-Z0-9\.]+)/i);
-
-      if (eoNum) document.getElementById('inputEoNumber').value = eoNum;
-      if (instructor) document.getElementById('inputInstructor').value = instructor;
-      if (refCode) document.getElementById('inputRefCode').value = refCode;
-      if (annexRef) document.getElementById('inputAnnexRef').value = annexRef;
-
-      // Extract Ws
-      const what = extractPattern(/What:\s*([^Where:Why:Review:]+)/i);
-      const where = extractPattern(/Where:\s*([^What:Why:Review:]+)/i);
-      const why = extractPattern(/Why:\s*([^What:Where:Review:]+)/i);
-
-      if (what) document.getElementById('inputWhat').value = what;
-      if (where) document.getElementById('inputWhere').value = where;
-      if (why) document.getElementById('inputWhy').value = why;
-
-      // Extract TPs
-      const tpRegex = /TP\s*(\d+):?\s*([^TP\d+]+?)(?=(?:TP\s*\d+|END OF LESSON|CONCLUSION|$))/gi;
-      let tpMatch;
-      let parsedTPs = false;
-
-      while ((tpMatch = tpRegex.exec(text)) !== null) {
-        parsedTPs = true;
-        const tpBlock = tpMatch[2];
-        unsortedText = unsortedText.replace(tpMatch[0], " ");
-
-        addTeachingPoint({
-          name: `TP ${tpMatch[1]}`,
-          time: "5",
-          method: "Interactive Lecture",
-          content: tpBlock.trim(),
-          safety: "",
-          confirmation: "",
-          notes: ""
-        });
+      if (currentTP) {
+        addTeachingPoint(currentTP);
       }
 
-      // Cleanup remaining extra text and append to Section 1 Extras
-      unsortedText = unsortedText.replace(/\s+/g, " ").trim();
-      if (unsortedText) {
-        const existingUnsorted = document.getElementById('inputUnsortedNotes').value;
-        document.getElementById('inputUnsortedNotes').value = existingUnsorted ? `${existingUnsorted}\n\n${unsortedText}` : unsortedText;
+      if (unsortedLines.length > 0) {
+        document.getElementById('inputUnsortedNotes').value = unsortedLines.join("\n");
       }
 
+      renderTpForms();
       updatePreview();
-      alert("PDF imported! Recognizable fields have been auto-filled, and remaining details sent to Extras / Unsorted Notes.");
+      alert("PDF imported! Fields filled and unsorted notes routed to Section 1 Extras.");
     }
 
     // PDF Export Function
@@ -807,7 +864,8 @@
         filename:     `${eoNum}_Lesson_Plan.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'] }
       };
 
       html2pdf().set(opt).from(element).save().then(() => {
@@ -815,7 +873,6 @@
       });
     }
 
-    // Event Listeners
     window.addEventListener('resize', fitPreviewToContainer);
 
     // Initial Load
